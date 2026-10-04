@@ -67,6 +67,9 @@ export class Executor {
           player,
           intent.targetID,
           null,
+          true,
+          intent.targetTile ?? null,
+          intent.sourceTile ?? null,
         );
       }
       case "cancel_attack":

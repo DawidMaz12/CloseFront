@@ -6,6 +6,8 @@ import {
   ContextMenuEvent,
   DragEvent,
   InputHandler,
+  MapDragEvent,
+  MapDragPreviewEvent,
   MouseOverEvent,
   TouchLongPressStartEvent,
   UnitSelectionEvent,
@@ -819,7 +821,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("handles invalid JSON gracefully and warns", () => {
-      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => { });
       testSettings.setKeybinds("not a json");
 
       inputHandler.initialize();
@@ -983,8 +985,8 @@ describe("InputHandler AutoUpgrade", () => {
     test("two actions bound to the same key are both kept (no overwrite)", () => {
       const ih = makeHandler() as any;
       ih.keybindAndEvent = [];
-      ih.addKeybindAndEvent("KeyX", () => {});
-      ih.addKeybindAndEvent("KeyX", () => {});
+      ih.addKeybindAndEvent("KeyX", () => { });
+      ih.addKeybindAndEvent("KeyX", () => { });
 
       const entries = ih.keybindAndEvent.filter(
         ([k]: [string, unknown]) => k === "KeyX",
@@ -1342,6 +1344,98 @@ describe("Warship box selection (Shift+drag)", () => {
     expect(inputHandler["selectionBoxActive"]).toBe(false);
   });
 
+  test("right-drag emits attack coordinates without panning or opening context menu", () => {
+    const listener = vi.fn();
+    const previewListener = vi.fn();
+    const panListener = vi.fn();
+    const menuListener = vi.fn();
+    eventBus.on(MapDragEvent, listener);
+    eventBus.on(MapDragPreviewEvent, previewListener);
+    eventBus.on(DragEvent, panListener);
+    eventBus.on(ContextMenuEvent, menuListener);
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 2,
+        clientX: 50,
+        clientY: 60,
+        pointerId: 1,
+      }),
+    );
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 2,
+        clientX: 100,
+        clientY: 110,
+        pointerId: 1,
+      }),
+    );
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 2,
+        clientX: 150,
+        clientY: 160,
+        pointerId: 1,
+      }),
+    );
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 150, clientY: 160 }),
+    );
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        startX: 50,
+        startY: 60,
+        endX: 150,
+        endY: 160,
+        button: 2,
+      }),
+    );
+    expect(panListener).not.toHaveBeenCalled();
+    expect(menuListener).not.toHaveBeenCalled();
+    expect(previewListener).toHaveBeenCalledWith(
+      expect.objectContaining({ startX: 50, startY: 60, active: true }),
+    );
+    expect(previewListener).toHaveBeenLastCalledWith(
+      expect.objectContaining({ endX: 150, endY: 160, active: false }),
+    );
+  });
+
+  test("left-drag continues to pan and does not emit a directed-attack drag", () => {
+    const attackDragListener = vi.fn();
+    const panListener = vi.fn();
+    eventBus.on(MapDragEvent, attackDragListener);
+    eventBus.on(DragEvent, panListener);
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 50,
+        clientY: 60,
+        pointerId: 1,
+      }),
+    );
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 150,
+        clientY: 160,
+        pointerId: 1,
+      }),
+    );
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 150,
+        clientY: 160,
+        pointerId: 1,
+      }),
+    );
+
+    expect(panListener).toHaveBeenCalled();
+    expect(attackDragListener).not.toHaveBeenCalled();
+  });
+
   test("Escape cancels active selection box", () => {
     const listener = vi.fn();
     eventBus.on(WarshipSelectionBoxCancelEvent, listener);
@@ -1429,7 +1523,7 @@ describe("InputHandler right-click cancels unit selection (#4692)", () => {
 
   const rightClick = () =>
     inputHandler["onContextMenu"]({
-      preventDefault: () => {},
+      preventDefault: () => { },
       clientX: 100,
       clientY: 100,
     } as unknown as MouseEvent);

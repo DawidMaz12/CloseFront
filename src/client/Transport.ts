@@ -52,21 +52,21 @@ import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
 
 export class PauseGameIntentEvent implements GameEvent {
-  constructor(public readonly paused: boolean) {}
+  constructor(public readonly paused: boolean) { }
 }
 
 export class SendAllianceRequestIntentEvent implements GameEvent {
   constructor(
     public readonly requestor: PlayerView,
     public readonly recipient: PlayerView,
-  ) {}
+  ) { }
 }
 
 export class SendBreakAllianceIntentEvent implements GameEvent {
   constructor(
     public readonly requestor: PlayerView,
     public readonly recipient: PlayerView,
-  ) {}
+  ) { }
 }
 
 export class SendUpgradeStructureIntentEvent implements GameEvent {
@@ -74,33 +74,35 @@ export class SendUpgradeStructureIntentEvent implements GameEvent {
     public readonly unitId: number,
     public readonly unitType: UnitType,
     public readonly amount: number = 1,
-  ) {}
+  ) { }
 }
 
 export class SendAllianceRejectIntentEvent implements GameEvent {
-  constructor(public readonly requestor: PlayerView) {}
+  constructor(public readonly requestor: PlayerView) { }
 }
 
 export class SendAllianceExtensionIntentEvent implements GameEvent {
-  constructor(public readonly recipient: PlayerView) {}
+  constructor(public readonly recipient: PlayerView) { }
 }
 
 export class SendSpawnIntentEvent implements GameEvent {
-  constructor(public readonly tile: TileRef) {}
+  constructor(public readonly tile: TileRef) { }
 }
 
 export class SendAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID | null,
     public readonly troops: number,
-  ) {}
+    public readonly targetTile?: TileRef,
+    public readonly sourceTile?: TileRef,
+  ) { }
 }
 
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
     public readonly dst: TileRef,
     public readonly troops: number,
-  ) {}
+  ) { }
 }
 
 export class BuildUnitIntentEvent implements GameEvent {
@@ -109,32 +111,32 @@ export class BuildUnitIntentEvent implements GameEvent {
     public readonly tile: TileRef,
     public readonly rocketDirectionUp?: boolean,
     public readonly amount?: number,
-  ) {}
+  ) { }
 }
 
 export class SendTargetPlayerIntentEvent implements GameEvent {
-  constructor(public readonly targetID: PlayerID) {}
+  constructor(public readonly targetID: PlayerID) { }
 }
 
 export class SendEmojiIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView | typeof AllPlayers,
     public readonly emoji: number,
-  ) {}
+  ) { }
 }
 
 export class SendDonateGoldIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
     public readonly gold: Gold | null,
-  ) {}
+  ) { }
 }
 
 export class SendDonateTroopsIntentEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
     public readonly troops: number | null,
-  ) {}
+  ) { }
 }
 
 export class SendQuickChatEvent implements GameEvent {
@@ -142,87 +144,87 @@ export class SendQuickChatEvent implements GameEvent {
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
     public readonly target?: PlayerID,
-  ) {}
+  ) { }
 }
 
 export class SendEmbargoIntentEvent implements GameEvent {
   constructor(
     public readonly target: PlayerView,
     public readonly action: "start" | "stop",
-  ) {}
+  ) { }
 }
 
 export class SendEmbargoAllIntentEvent implements GameEvent {
-  constructor(public readonly action: "start" | "stop") {}
+  constructor(public readonly action: "start" | "stop") { }
 }
 
 export class SendDeleteUnitIntentEvent implements GameEvent {
-  constructor(public readonly unitId: number) {}
+  constructor(public readonly unitId: number) { }
 }
 
 export class CancelAttackIntentEvent implements GameEvent {
-  constructor(public readonly attackID: string) {}
+  constructor(public readonly attackID: string) { }
 }
 
 export class CancelBoatIntentEvent implements GameEvent {
-  constructor(public readonly unitID: number) {}
+  constructor(public readonly unitID: number) { }
 }
 
 export class SendWinnerEvent implements GameEvent {
   constructor(
     public readonly winner: Winner,
     public readonly allPlayersStats: AllPlayersStats,
-  ) {}
+  ) { }
 }
 export class SendLiveStatsEvent implements GameEvent {
-  constructor(public readonly stats: LiveStats) {}
+  constructor(public readonly stats: LiveStats) { }
 }
 export class SendPlayerReportEvent implements GameEvent {
   constructor(
     public readonly reported: ClientID,
     public readonly reason: ReportReason,
-  ) {}
+  ) { }
 }
 // Emitted once a report has actually gone to the server, so the UI only
 // marks a player as reported when it has been.
 export class PlayerReportedEvent implements GameEvent {
-  constructor(public readonly reported: ClientID) {}
+  constructor(public readonly reported: ClientID) { }
 }
 export class SendHashEvent implements GameEvent {
   constructor(
     public readonly tick: Tick,
     public readonly hash: number,
-  ) {}
+  ) { }
 }
 
 // Emitted when the server tells us the host started a successor lobby, carrying
 // the new game id to move the group to.
 export class NewLobbyEvent implements GameEvent {
-  constructor(public readonly gameID: string) {}
+  constructor(public readonly gameID: string) { }
 }
 
 export class MoveWarshipIntentEvent implements GameEvent {
   constructor(
     public readonly unitIds: number[],
     public readonly tile: number,
-  ) {}
+  ) { }
 }
 
 export class SendKickPlayerIntentEvent implements GameEvent {
-  constructor(public readonly target: string) {}
+  constructor(public readonly target: string) { }
 }
 
 export class SendUpdateGameConfigIntentEvent implements GameEvent {
-  constructor(public readonly config: Partial<GameConfig>) {}
+  constructor(public readonly config: Partial<GameConfig>) { }
 }
 
 export class SendToggleGameStartTimer implements GameEvent {
-  constructor() {}
+  constructor() { }
 }
 
 // Switch between playing and watching from the lobby screen.
 export class SendSpectateEvent implements GameEvent {
-  constructor(public readonly spectator: boolean) {}
+  constructor(public readonly spectator: boolean) { }
 }
 
 // One-shot marker that this lobby has already sent us to a sibling, so a
@@ -800,6 +802,8 @@ export class Transport {
       type: "attack",
       targetID: event.targetID,
       troops: event.troops,
+      targetTile: event.targetTile,
+      sourceTile: event.sourceTile,
     });
   }
 

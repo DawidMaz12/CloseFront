@@ -118,8 +118,8 @@ function makeTransport(extra: Partial<LobbyConfig> = {}) {
 // messages are buffered until the server's start frame proves admission.
 function handshake(transport: Transport): FakeWebSocket {
   transport.connect(
-    () => {},
-    () => {},
+    () => { },
+    () => { },
   );
   const ws = FakeWebSocket.instances[FakeWebSocket.instances.length - 1];
   ws.serverOpen();
@@ -152,9 +152,9 @@ describe("Transport send paths", () => {
     FakeWebSocket.instances = [];
     vi.stubGlobal("WebSocket", FakeWebSocket);
     localServer.onMessage.mockClear();
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => { });
+    vi.spyOn(console, "error").mockImplementation(() => { });
+    vi.spyOn(console, "warn").mockImplementation(() => { });
     transports = [];
   });
 
@@ -175,6 +175,7 @@ describe("Transport send paths", () => {
       const { eventBus, ws } = connected();
       eventBus.emit(new SendSpawnIntentEvent(123));
       eventBus.emit(new SendAttackIntentEvent("player01", 50));
+      eventBus.emit(new SendAttackIntentEvent("player02", 25, 42, 7));
       eventBus.emit(
         new SendDonateGoldIntentEvent(
           { id: () => "player02" } as unknown as PlayerView,
@@ -188,6 +189,16 @@ describe("Transport send paths", () => {
         {
           type: "intent",
           intent: { type: "attack", targetID: "player01", troops: 50 },
+        },
+        {
+          type: "intent",
+          intent: {
+            type: "attack",
+            targetID: "player02",
+            troops: 25,
+            targetTile: 42,
+            sourceTile: 7,
+          },
         },
         {
           type: "intent",
@@ -232,8 +243,8 @@ describe("Transport send paths", () => {
       });
       transports.push(transport);
       transport.connect(
-        () => {},
-        () => {},
+        () => { },
+        () => { },
       );
       const ws = FakeWebSocket.instances[0];
       ws.serverOpen();
@@ -280,8 +291,8 @@ describe("Transport send paths", () => {
       });
       transports.push(transport);
       transport.connect(
-        () => {},
-        () => {},
+        () => { },
+        () => { },
       );
       eventBus.emit(new SendWinnerEvent(["player", "player01"], {}));
 
@@ -336,8 +347,8 @@ describe("Transport send paths", () => {
       });
       transports.push(transport);
       transport.connect(
-        () => {},
-        () => {},
+        () => { },
+        () => { },
       );
 
       transport.leaveGame();
@@ -355,7 +366,7 @@ describe("Transport send paths", () => {
       const onconnect = vi.fn();
       const { transport } = makeTransport();
       transports.push(transport);
-      transport.connect(onconnect, () => {});
+      transport.connect(onconnect, () => { });
       const ws = FakeWebSocket.instances[0];
 
       (transport as any).socket = null;
@@ -368,8 +379,8 @@ describe("Transport send paths", () => {
       const { transport } = makeTransport();
       transports.push(transport);
       transport.connect(
-        () => {},
-        () => {},
+        () => { },
+        () => { },
       );
       const ws = FakeWebSocket.instances[0];
 
@@ -383,7 +394,7 @@ describe("Transport send paths", () => {
       const onmessage = vi.fn();
       const { transport } = makeTransport();
       transports.push(transport);
-      transport.connect(() => {}, onmessage);
+      transport.connect(() => { }, onmessage);
       const ws = FakeWebSocket.instances[0];
       ws.serverOpen();
 

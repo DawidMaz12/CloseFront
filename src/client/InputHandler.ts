@@ -14,20 +14,40 @@ export class MouseUpEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
+}
+
+export class MapDragEvent implements GameEvent {
+  constructor(
+    public readonly startX: number,
+    public readonly startY: number,
+    public readonly endX: number,
+    public readonly endY: number,
+    public readonly button: 2 = 2,
+  ) { }
+}
+
+export class MapDragPreviewEvent implements GameEvent {
+  constructor(
+    public readonly startX: number,
+    public readonly startY: number,
+    public readonly endX: number,
+    public readonly endY: number,
+    public readonly active: boolean,
+  ) { }
 }
 
 export class MouseOverEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
 }
 export class TouchEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
 }
 
 /**
@@ -41,28 +61,28 @@ export class UnitSelectionEvent implements GameEvent {
     public readonly unit: UnitView | null,
     public readonly isSelected: boolean,
     public readonly units: UnitView[] = [],
-  ) {}
+  ) { }
 }
 
 export class MouseDownEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
 }
 
 export class MouseMoveEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
 }
 
 export class ContextMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
 }
 
 /** Zoom sensitivity: scale is divided by `1 + delta / ZOOM_DELTA_DIVISOR`. */
@@ -73,38 +93,38 @@ export class ZoomEvent implements GameEvent {
     public readonly x: number,
     public readonly y: number,
     public readonly delta: number,
-  ) {}
+  ) { }
 }
 
 export class DragEvent implements GameEvent {
   constructor(
     public readonly deltaX: number,
     public readonly deltaY: number,
-  ) {}
+  ) { }
 }
 
 export class AlternateViewEvent implements GameEvent {
-  constructor(public readonly alternateView: boolean) {}
+  constructor(public readonly alternateView: boolean) { }
 }
 
-export class CloseViewEvent implements GameEvent {}
+export class CloseViewEvent implements GameEvent { }
 
-export class RefreshGraphicsEvent implements GameEvent {}
+export class RefreshGraphicsEvent implements GameEvent { }
 
-export class ToggleRenderDebugGuiEvent implements GameEvent {}
+export class ToggleRenderDebugGuiEvent implements GameEvent { }
 
-export class TogglePerformanceOverlayEvent implements GameEvent {}
+export class TogglePerformanceOverlayEvent implements GameEvent { }
 
 export class ToggleStructureEvent implements GameEvent {
   constructor(
     public readonly structureTypes: PlayerBuildableUnitType[] | null,
-  ) {}
+  ) { }
 }
 
-export class ConfirmGhostStructureEvent implements GameEvent {}
+export class ConfirmGhostStructureEvent implements GameEvent { }
 
 export class SwapRocketDirectionEvent implements GameEvent {
-  constructor(public readonly rocketDirectionUp: boolean) {}
+  constructor(public readonly rocketDirectionUp: boolean) { }
 }
 
 /** Emitted while the user is drawing a shift+drag selection rectangle */
@@ -114,7 +134,7 @@ export class WarshipSelectionBoxUpdateEvent implements GameEvent {
     public readonly startY: number,
     public readonly endX: number,
     public readonly endY: number,
-  ) {}
+  ) { }
 }
 
 /** Emitted when the user releases the mouse after drawing a selection rectangle */
@@ -124,80 +144,80 @@ export class WarshipSelectionBoxCompleteEvent implements GameEvent {
     public readonly startY: number,
     public readonly endX: number,
     public readonly endY: number,
-  ) {}
+  ) { }
 }
 
 /** Emitted when the selection box is cancelled (e.g. Escape or no drag) */
-export class WarshipSelectionBoxCancelEvent implements GameEvent {}
+export class WarshipSelectionBoxCancelEvent implements GameEvent { }
 
 /** Emitted when the player triggers select-all-warships hotkey */
-export class SelectAllWarshipsEvent implements GameEvent {}
+export class SelectAllWarshipsEvent implements GameEvent { }
 
 /** Emitted when a touch long-press is detected (shows crosshair indicator) */
 export class TouchLongPressStartEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
 }
 
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
 }
 export class ShowEmojiMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
 }
 
-export class DoBoatAttackEvent implements GameEvent {}
+export class DoBoatAttackEvent implements GameEvent { }
 
-export class DoGroundAttackEvent implements GameEvent {}
+export class DoGroundAttackEvent implements GameEvent { }
 
-export class DoRetaliateAttackEvent implements GameEvent {}
+export class DoRetaliateAttackEvent implements GameEvent { }
 
-export class DoRequestAllianceEvent implements GameEvent {}
+export class DoRequestAllianceEvent implements GameEvent { }
 
-export class DoBreakAllianceEvent implements GameEvent {}
+export class DoBreakAllianceEvent implements GameEvent { }
 
 export class AttackRatioEvent implements GameEvent {
-  constructor(public readonly attackRatio: number) {}
+  constructor(public readonly attackRatio: number) { }
 }
 
 export class ReplaySpeedChangeEvent implements GameEvent {
-  constructor(public readonly replaySpeedMultiplier: ReplaySpeedMultiplier) {}
+  constructor(public readonly replaySpeedMultiplier: ReplaySpeedMultiplier) { }
 }
 
-export class TogglePauseIntentEvent implements GameEvent {}
+export class TogglePauseIntentEvent implements GameEvent { }
 
-export class GameSpeedUpIntentEvent implements GameEvent {}
+export class GameSpeedUpIntentEvent implements GameEvent { }
 
-export class GameSpeedDownIntentEvent implements GameEvent {}
+export class GameSpeedDownIntentEvent implements GameEvent { }
 
 export class CenterCameraEvent implements GameEvent {
-  constructor() {}
+  constructor() { }
 }
 
 export class AutoUpgradeEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
-  ) {}
+  ) { }
 }
 
 export class ToggleCoordinateGridEvent implements GameEvent {
-  constructor(public readonly enabled: boolean) {}
+  constructor(public readonly enabled: boolean) { }
 }
 
 export class TickMetricsEvent implements GameEvent {
   constructor(
     public readonly tickExecutionDuration?: number,
     public readonly tickDelay?: number,
-  ) {}
+  ) { }
 }
 
 interface KeybindEntry {
@@ -227,6 +247,16 @@ export class InputHandler {
   private lastPointerDownY: number = 0;
 
   private pointers: Map<number, PointerEvent> = new Map();
+  private secondaryPointer: {
+    pointerId: number;
+    startX: number;
+    startY: number;
+  } | null = null;
+  private suppressedContextMenu: {
+    x: number;
+    y: number;
+    expiresAt: number;
+  } | null = null;
 
   private lastPinchDistance: number = 0;
 
@@ -271,7 +301,7 @@ export class InputHandler {
     public uiState: UIState,
     private canvas: HTMLElement,
     private eventBus: EventBus,
-  ) {}
+  ) { }
 
   initialize() {
     this.buildKeybindTable();
@@ -329,6 +359,8 @@ export class InputHandler {
    */
   private resetPointerState() {
     this.pointerDown = false;
+    this.secondaryPointer = null;
+    this.suppressedContextMenu = null;
     this.pointers.clear();
     this.lastGestureScale = null;
     if (this.longPressTimer !== null) {
@@ -591,7 +623,19 @@ export class InputHandler {
         }
         const hadSelection =
           this.selectionBoxActive || this.multiSelectionActive;
+        const canceledAttackVector = this.secondaryPointer;
         this.resetPointerState();
+        if (canceledAttackVector !== null) {
+          this.eventBus.emit(
+            new MapDragPreviewEvent(
+              canceledAttackVector.startX,
+              canceledAttackVector.startY,
+              canceledAttackVector.startX,
+              canceledAttackVector.startY,
+              false,
+            ),
+          );
+        }
         if (hadSelection) {
           this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
         }
@@ -834,6 +878,27 @@ export class InputHandler {
       return;
     }
 
+    // Right-button drags are reserved for directed attacks. Keep them out of
+    // the normal pointer state so they never pan the map while the gesture is
+    // in progress.
+    if (event.button === 2) {
+      this.secondaryPointer = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+      this.eventBus.emit(
+        new MapDragPreviewEvent(
+          event.clientX,
+          event.clientY,
+          event.clientX,
+          event.clientY,
+          true,
+        ),
+      );
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
@@ -887,6 +952,34 @@ export class InputHandler {
   onPointerUp(event: PointerEvent) {
     if (event.button === 1) {
       event.preventDefault();
+      return;
+    }
+
+    if (this.secondaryPointer?.pointerId === event.pointerId) {
+      const { startX, startY } = this.secondaryPointer;
+      this.secondaryPointer = null;
+      if (event.type === "pointercancel") {
+        this.eventBus.emit(
+          new MapDragPreviewEvent(startX, startY, event.clientX, event.clientY, false),
+        );
+        return;
+      }
+
+      const dist =
+        Math.abs(event.clientX - startX) + Math.abs(event.clientY - startY);
+      if (dist >= this.DRAG_THRESHOLD_PX) {
+        this.suppressedContextMenu = {
+          x: event.clientX,
+          y: event.clientY,
+          expiresAt: Date.now() + 500,
+        };
+        this.eventBus.emit(
+          new MapDragEvent(startX, startY, event.clientX, event.clientY, 2),
+        );
+      }
+      this.eventBus.emit(
+        new MapDragPreviewEvent(startX, startY, event.clientX, event.clientY, false),
+      );
       return;
     }
 
@@ -1053,6 +1146,19 @@ export class InputHandler {
   }
 
   private onPointerMove(event: PointerEvent) {
+    if (this.secondaryPointer?.pointerId === event.pointerId) {
+      this.eventBus.emit(
+        new MapDragPreviewEvent(
+          this.secondaryPointer.startX,
+          this.secondaryPointer.startY,
+          event.clientX,
+          event.clientY,
+          true,
+        ),
+      );
+      return;
+    }
+
     if (event.button === 1) {
       event.preventDefault();
       return;
@@ -1125,6 +1231,16 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
+    const suppressed = this.suppressedContextMenu;
+    this.suppressedContextMenu = null;
+    if (
+      suppressed !== null &&
+      Date.now() <= suppressed.expiresAt &&
+      Math.abs(event.clientX - suppressed.x) <= 2 &&
+      Math.abs(event.clientY - suppressed.y) <= 2
+    ) {
+      return;
+    }
     if (this.gameView.inSpawnPhase()) {
       return;
     }
@@ -1242,17 +1358,17 @@ export class InputHandler {
       key: string;
       type: PlayerBuildableUnitType;
     }> = [
-      { key: "buildCity", type: UnitType.City },
-      { key: "buildFactory", type: UnitType.Factory },
-      { key: "buildPort", type: UnitType.Port },
-      { key: "buildDefensePost", type: UnitType.DefensePost },
-      { key: "buildMissileSilo", type: UnitType.MissileSilo },
-      { key: "buildSamLauncher", type: UnitType.SAMLauncher },
-      { key: "buildAtomBomb", type: UnitType.AtomBomb },
-      { key: "buildHydrogenBomb", type: UnitType.HydrogenBomb },
-      { key: "buildWarship", type: UnitType.Warship },
-      { key: "buildMIRV", type: UnitType.MIRV },
-    ];
+        { key: "buildCity", type: UnitType.City },
+        { key: "buildFactory", type: UnitType.Factory },
+        { key: "buildPort", type: UnitType.Port },
+        { key: "buildDefensePost", type: UnitType.DefensePost },
+        { key: "buildMissileSilo", type: UnitType.MissileSilo },
+        { key: "buildSamLauncher", type: UnitType.SAMLauncher },
+        { key: "buildAtomBomb", type: UnitType.AtomBomb },
+        { key: "buildHydrogenBomb", type: UnitType.HydrogenBomb },
+        { key: "buildWarship", type: UnitType.Warship },
+        { key: "buildMIRV", type: UnitType.MIRV },
+      ];
     for (const { key, type } of buildKeybinds) {
       if (this.keybindMatchesEvent({ code, shiftKey }, this.keybinds[key]))
         return type;

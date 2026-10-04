@@ -418,7 +418,7 @@ export class LobbyInfoEvent implements GameEvent {
   constructor(
     public lobby: GameInfo,
     public myClientID: ClientID,
-  ) {}
+  ) { }
 }
 
 // This game's opaque grouping token arrived (see GroupToken in the server
@@ -427,7 +427,7 @@ export class LobbyInfoEvent implements GameEvent {
 // so a listener does not have to know which message it came from. Never
 // emitted for singleplayer or a replay: there is no server game to group.
 export class GroupTokenEvent implements GameEvent {
-  constructor(public groupToken: string) {}
+  constructor(public groupToken: string) { }
 }
 
 export interface ClientInfo {
@@ -474,7 +474,7 @@ const TeamCountConfigSchema = zb.union(
       typeof v === "number"
         ? 0
         : TEAM_COUNT_PRESETS.indexOf(v as (typeof TEAM_COUNT_PRESETS)[number]) +
-          1,
+        1,
   },
 );
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
@@ -673,6 +673,8 @@ export const AttackIntentSchema = z.object({
   type: z.literal("attack"),
   targetID: MappedID.nullable(),
   troops: zb.float({ min: 0 }).nullable(),
+  targetTile: zb.uint().optional(),
+  sourceTile: zb.uint().optional(),
 });
 
 export const SpawnIntentSchema = z.object({

@@ -35,6 +35,9 @@ import { assertNever } from "../Util";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
 const malusForRetreat = 25;
+const DIRECTION_FORWARD_WEIGHT = 1;
+const DIRECTION_LATERAL_WEIGHT = 2;
+const MAX_DIRECTION_PRIORITY_BIAS = 3;
 export class AttackExecution implements Execution {
   private active: boolean = true;
   private toConquer = new FlatBinaryHeap();
@@ -62,7 +65,9 @@ export class AttackExecution implements Execution {
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null = null,
     private removeTroops: boolean = true,
-  ) {}
+    private targetTile: TileRef | null = null,
+    private directionSourceTile: TileRef | null = null,
+  ) { }
 
   public targetID(): PlayerID | null {
     return this._targetID;
@@ -98,7 +103,8 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    // ALLIANCE CHECK — block attacks on friendly (ally or same team)
+    // ALLIANCE CHECK — block attacks on friendly (ally or same
+    // team)
     if (this.target.isPlayer()) {
       const targetPlayer = this.target as Player;
       if (this._owner.isFriendly(targetPlayer)) {
@@ -134,8 +140,9 @@ export class AttackExecution implements Execution {
       this.startTroops = Math.min(this._owner.troops(), this.startTroops);
       // Take the amount that was actually deducted, not the amount asked for.
       // removeTroops() floors, so a fractional request leaves the attack
-      // holding troops the owner never paid for — and retreat refunds the
-      // combined total, turning the leftover fractions into free troops.
+      // holding troops the owner never paid for — and retreat refunds
+      // the combined total, turning the leftover fractions into free
+      // troops.
       this.startTroops = this._owner.removeTroops(this.startTroops);
     }
     this.attack = this._owner.createAttack(
@@ -217,7 +224,8 @@ export class AttackExecution implements Execution {
 
     this.toConquer.clear();
     this.attack.clearBorder();
-    // forEach over the dense storage — the values() generator showed up in long-game profiles
+    // forEach over the dense storage — the values() generator showed up in
+    // long-game profiles
     this._owner.borderTiles().forEach((tile) => this.addNeighbors(tile));
   }
 
@@ -350,8 +358,8 @@ export class AttackExecution implements Execution {
     const defender = this.target.isPlayer() ? this.target : null;
     // Same test as scanning nearbyUnits() for a post owned by the defender
     // (active, not under construction, within range), without building a
-    // result array per conquered tile — this runs for every tile of every
-    // attack on the map.
+    // result array per conquered tile — this runs for every tile of
+    // every attack on the map.
     const defenderHasDefensePost =
       defender !== null &&
       this.mg.hasUnitNearby(
@@ -371,13 +379,13 @@ export class AttackExecution implements Execution {
         defender === null
           ? null
           : {
-              type: defender.type(),
-              numTiles: defender.numTilesOwned(),
-              troops: defender.troops(),
-              isTraitor: defender.isTraitor(),
-              isDisconnectedTeammate:
-                defender.isDisconnected() && this._owner.isOnSameTeam(defender),
-            },
+            type: defender.type(),
+            numTiles: defender.numTilesOwned(),
+            troops: defender.troops(),
+            isTraitor: defender.isTraitor(),
+            isDisconnectedTeammate:
+              defender.isDisconnected() && this._owner.isOnSameTeam(defender),
+          },
       defenderHasDefensePost,
       falloutRatio: this.mg.hasFallout(tile)
         ? this.mg.numTilesWithFallout() / this.mg.numLandTiles()
@@ -437,9 +445,35 @@ export class AttackExecution implements Execution {
           break;
       }
 
-      const priority =
+      let priority =
         (this.random.nextInt(0, 7) + 10) * (1 - numOwnedByMe * 0.5 + mag / 2) +
         tickNow;
+
+      const source = this.directionSourceTile ?? this.sourceTile;
+      if (source !== null && this.targetTile !== null) {
+        const sourceX = this.map.x(source);
+        const sourceY = this.map.y(source);
+        const targetX = this.map.x(this.targetTile);
+        const targetY = this.map.y(this.targetTile);
+        const tileX = this.map.x(neighbor);
+        const tileY = this.map.y(neighbor);
+        const dx = targetX - sourceX;
+        const dy = targetY - sourceY;
+        const px = tileX - sourceX;
+        const py = tileY - sourceY;
+        const forward = px * dx + py * dy;
+        const lateral = Math.abs(px * dy - py * dx);
+        const scale = Math.max(Math.abs(dx), Math.abs(dy), 1);
+
+        const directionBias =
+          (lateral * DIRECTION_LATERAL_WEIGHT -
+            forward * DIRECTION_FORWARD_WEIGHT) /
+          scale;
+        priority += Math.max(
+          -MAX_DIRECTION_PRIORITY_BIAS,
+          Math.min(MAX_DIRECTION_PRIORITY_BIAS, directionBias),
+        );
+      }
 
       this.toConquer.enqueue(neighbor, priority);
     }
@@ -501,6 +535,8 @@ export class AttackExecution implements Execution {
       owner: w.player(this._owner),
       targetID: this._targetID,
       sourceTile: this.sourceTile,
+      targetTile: this.targetTile,
+      directionSourceTile: this.directionSourceTile,
       removeTroops: this.removeTroops,
     });
   }
@@ -527,6 +563,8 @@ export class AttackExecution implements Execution {
     this._owner = r.player(s.owner);
     this._targetID = s.targetID;
     this.sourceTile = s.sourceTile;
+    this.targetTile = s.targetTile;
+    this.directionSourceTile = s.directionSourceTile;
     this.removeTroops = s.removeTroops;
   }
 }
@@ -551,13 +589,22 @@ const AttackExecutionStateSchema = z.object({
   owner: zPlayerRef(),
   targetID: z.string().nullable(),
   sourceTile: zTile().nullable(),
+  targetTile: zTile().nullable(),
+  directionSourceTile: zTile().nullable(),
   removeTroops: z.boolean(),
 });
 type AttackExecutionState = z.infer<typeof AttackExecutionStateSchema>;
 
 export const AttackExecutionSnapshot = execSnapshotType({
   name: "Attack",
-  version: 1,
+  version: 2,
   schema: AttackExecutionStateSchema,
+  migrations: {
+    1: (state) => ({
+      ...state,
+      targetTile: null,
+      directionSourceTile: null,
+    }),
+  },
   cls: () => AttackExecution,
 });

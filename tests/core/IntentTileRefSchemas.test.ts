@@ -59,6 +59,35 @@ describe("intent schemas: tile refs are non-negative integers", () => {
       expect(schema.safeParse(build(-Infinity)).success).toBe(false);
     });
   }
+
+  it("attack accepts legacy intents and validates optional source/target refs", () => {
+    expect(
+      AttackIntentSchema.safeParse({
+        type: "attack",
+        targetID: null,
+        troops: 12.5,
+      }).success,
+    ).toBe(true);
+    expect(
+      AttackIntentSchema.safeParse({
+        type: "attack",
+        targetID: null,
+        troops: 12.5,
+        targetTile: 40,
+        sourceTile: 12,
+      }).success,
+    ).toBe(true);
+    for (const badTile of [-1, 1.5, NaN, Infinity]) {
+      expect(
+        AttackIntentSchema.safeParse({
+          type: "attack",
+          targetID: null,
+          troops: 12.5,
+          targetTile: badTile,
+        }).success,
+      ).toBe(false);
+    }
+  });
 });
 
 describe("intent schemas: unit ids are non-negative integers", () => {

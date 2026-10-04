@@ -56,6 +56,15 @@ describe("snapshot: land attacks", () => {
     game.addExecution(
       new AttackExecution(20_000, a, game.terraNullius().id()),
       new AttackExecution(2_000, b, a.id()),
+      new AttackExecution(
+        15_000,
+        a,
+        b.id(),
+        null,
+        true,
+        game.ref(70, 20),
+        game.ref(19, 20),
+      ),
     );
     // Not yet initialized: still queued.
     await expectSnapshotRoundTrip(game, MAP, 3);
@@ -66,6 +75,28 @@ describe("snapshot: land attacks", () => {
     game.addExecution(new AttackExecution(15_000, a, b.id()));
     executeTicks(game, 4);
     await expectSnapshotRoundTrip(game, MAP, 60);
+  });
+
+  test("targeted attacks prioritize the frontier near the attack axis", async () => {
+    const { game, a, b } = await landGame();
+    conquerRect(game, b, 20, 10, 40, 30);
+    const sourceTile = game.ref(15, 15);
+    const targetTile = game.ref(35, 15);
+    const execution = new AttackExecution(
+      1_000,
+      a,
+      b.id(),
+      null,
+      true,
+      targetTile,
+      sourceTile,
+    );
+    execution.init(game, game.ticks());
+
+    const firstTile = (execution as any).toConquer.dequeue() as number;
+    expect(
+      Math.abs(game.y(firstTile) - game.y(targetTile)),
+    ).toBeLessThanOrEqual(2);
   });
 
   test("retreating attack", async () => {

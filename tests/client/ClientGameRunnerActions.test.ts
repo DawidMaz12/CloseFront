@@ -14,10 +14,10 @@ vi.mock("../../src/client/Auth", () => ({
   getPlayToken: async () => "8f1d2c3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
 }));
 vi.mock("../../src/client/LocalServer", () => ({
-  LocalServer: class {},
+  LocalServer: class { },
 }));
 vi.mock("../../src/client/InGameModal", () => ({
-  showInGameAlert: vi.fn(async () => {}),
+  showInGameAlert: vi.fn(async () => { }),
   showInGameConfirm: vi.fn(async () => false),
 }));
 vi.mock("../../src/client/Utils", () => ({
@@ -42,38 +42,42 @@ vi.mock("../../src/client/theme/ThemeProvider", () => ({
   themeProvider: { reset: vi.fn() },
 }));
 vi.mock("../../src/client/sound/SoundManager", () => ({
-  SoundManager: class {},
+  SoundManager: class { },
 }));
 vi.mock("../../src/client/render/gl", () => ({
-  GLUnavailableError: class extends Error {},
-  MapRenderer: class {},
+  GLUnavailableError: class extends Error { },
+  MapRenderer: class { },
   applyGraphicsOverrides: vi.fn(),
   createRenderSettings: vi.fn(() => ({})),
   deepAssign: vi.fn(),
-  preloadAtlasData: vi.fn(async () => {}),
+  preloadAtlasData: vi.fn(async () => { }),
   renderDpr: () => 1,
   showGLGate: vi.fn(),
   trackGLInit: vi.fn(),
 }));
 vi.mock("../../src/client/WebGLFrameBuilder", () => ({
-  WebGLFrameBuilder: class {},
+  WebGLFrameBuilder: class { },
 }));
 vi.mock("../../src/client/controllers/MapLayerController", () => ({
-  MapLayerController: class {},
+  MapLayerController: class { },
 }));
 vi.mock("../../src/client/view", () => ({
-  GameView: class {},
-  PlayerView: class {},
+  GameView: class { },
+  PlayerView: class { },
 }));
 vi.mock("../../src/core/worker/WorkerClient", () => ({
-  WorkerClient: class {},
+  WorkerClient: class { },
 }));
 
 import {
   ClientGameRunner,
   LobbyConfig,
 } from "../../src/client/ClientGameRunner";
-import { MouseUpEvent } from "../../src/client/InputHandler";
+import {
+  MapDragEvent,
+  MapDragPreviewEvent,
+  MouseUpEvent,
+} from "../../src/client/InputHandler";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -81,6 +85,7 @@ import {
 } from "../../src/client/Transport";
 
 const TILE = 77 as TileRef;
+const SOURCE_TILE = 78 as TileRef;
 const CLICK = { x: 10, y: 20 };
 
 // Runner around fully mocked collaborators; started so clicks are handled.
@@ -94,6 +99,7 @@ function makeRunner(overrides: {
   const eventBus = new EventBus();
   const myPlayer = {
     actions: vi.fn(async () => overrides.actions ?? {}),
+    id: () => "me",
     troops: () => 100,
   };
   const gameView = {
@@ -101,10 +107,15 @@ function makeRunner(overrides: {
     inSpawnPhase: () => overrides.inSpawnPhase ?? false,
     myPlayer: () => null,
     isValidCoord: () => true,
-    ref: () => TILE,
+    ref: (x: number, y: number) => (x === 2 && y === 3 ? SOURCE_TILE : TILE),
+    x: (tile: TileRef) => (tile === SOURCE_TILE ? 2 : 1),
+    y: (tile: TileRef) => (tile === SOURCE_TILE ? 3 : 2),
+    circleSearch: () => new Set([SOURCE_TILE]),
     isLand: () => true,
     hasOwner: () => overrides.hasOwner ?? false,
-    owner: () => ({ id: () => "enemy1" }),
+    owner: (tile: TileRef) => ({
+      id: () => (tile === SOURCE_TILE ? "me" : "enemy1"),
+    }),
     playerByClientID: vi.fn(overrides.playerByClientID ?? (() => myPlayer)),
     euclideanDistSquared: () => overrides.boatDistSquared ?? 0,
   };
@@ -118,7 +129,9 @@ function makeRunner(overrides: {
       tick: vi.fn(),
       uiState: { attackRatio: 0.5, ghostStructure: null },
       transformHandler: {
-        screenToWorldCoordinates: vi.fn(() => ({ x: 1, y: 2 })),
+        screenToWorldCoordinates: vi.fn((x: number, y: number) => ({ x, y })),
+        screenToWorldCoordinatesFloat: vi.fn((x: number, y: number) => ({ x, y })),
+        worldToScreenCoordinates: vi.fn((cell: { x: number; y: number }) => cell),
       },
     } as never,
     input as never,
@@ -140,7 +153,7 @@ function makeRunner(overrides: {
 const flushPromises = () => new Promise((r) => setTimeout(r, 0));
 
 beforeEach(() => {
-  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "log").mockImplementation(() => { });
 });
 
 afterEach(() => {
@@ -174,6 +187,46 @@ describe("left click", () => {
     expect(attacks).toHaveLength(1);
     expect(attacks[0].targetID).toBe("enemy1");
     expect(attacks[0].troops).toBe(50); // 100 troops * 0.5 attack ratio
+    expect(attacks[0].targetTile).toBe(TILE);
+  });
+
+  it("turns a drag from owned land into a target-directed attack intent", async () => {
+    const { eventBus } = makeRunner({
+      actions: { canAttack: true, buildableUnits: [] },
+    });
+    const attacks: SendAttackIntentEvent[] = [];
+    eventBus.on(SendAttackIntentEvent, (e) => attacks.push(e));
+
+    eventBus.emit(new MapDragEvent(2, 3, 1, 2));
+    await flushPromises();
+
+    expect(attacks).toHaveLength(1);
+    expect(attacks[0]).toMatchObject({
+      targetID: "enemy1",
+      troops: 50,
+      targetTile: TILE,
+      sourceTile: SOURCE_TILE,
+    });
+  });
+
+  it("renders an arrow from the nearest owned tile to the dragged target", () => {
+    const { eventBus, runner } = makeRunner({
+      actions: { canAttack: true, buildableUnits: [] },
+    });
+
+    eventBus.emit(new MapDragPreviewEvent(2, 3, 1, 2, true));
+
+    const line = document.querySelector("svg line");
+    const target = document.querySelector("svg circle:last-child");
+    expect(line).not.toBeNull();
+    expect(line?.getAttribute("x1")).toBe("2.5");
+    expect(line?.getAttribute("y1")).toBe("3.5");
+    expect(line?.getAttribute("x2")).toBe("1.5");
+    expect(line?.getAttribute("y2")).toBe("2.5");
+    expect(target?.getAttribute("cx")).toBe("1.5");
+
+    runner.stop();
+    expect(document.querySelector("svg")).toBeNull();
   });
 
   it("does nothing when the player is not in the view yet", async () => {

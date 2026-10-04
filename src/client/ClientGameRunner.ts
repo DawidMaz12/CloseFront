@@ -15,6 +15,7 @@ import {
 import { findClosestBy, replacer } from "../core/Util";
 import {
   BuildableUnit,
+  Cell,
   PlayerType,
   Structures,
   UnitType,
@@ -45,6 +46,8 @@ import {
   DoRequestAllianceEvent,
   DoRetaliateAttackEvent,
   InputHandler,
+  MapDragEvent,
+  MapDragPreviewEvent,
   MouseMoveEvent,
   MouseUpEvent,
   TickMetricsEvent,
@@ -921,6 +924,10 @@ export class ClientGameRunner {
   // dropped; the start message replays them, so dropping them is expected.
   private awaitingStart = true;
   private lastMousePosition: { x: number; y: number } | null = null;
+  private attackVectorPreview: SVGSVGElement | null = null;
+  private attackVectorLine: SVGLineElement | null = null;
+  private attackVectorSource: SVGCircleElement | null = null;
+  private attackVectorTarget: SVGCircleElement | null = null;
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
@@ -978,6 +985,11 @@ export class ClientGameRunner {
     }, 20000);
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
+    this.eventBus.on(MapDragEvent, this.onMapDrag.bind(this));
+    this.eventBus.on(
+      MapDragPreviewEvent,
+      this.onMapDragPreview.bind(this),
+    );
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
     this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
     this.eventBus.on(
@@ -1168,11 +1180,11 @@ export class ClientGameRunner {
             // Filter out pause intents in replays
             this.gameView.config().isReplay()
               ? {
-                  ...message.turn,
-                  intents: message.turn.intents.filter(
-                    (i) => i.type !== "toggle_pause",
-                  ),
-                }
+                ...message.turn,
+                intents: message.turn.intents.filter(
+                  (i) => i.type !== "toggle_pause",
+                ),
+              }
               : message.turn,
           );
           this.turnsSeen++;
@@ -1195,6 +1207,11 @@ export class ClientGameRunner {
     // page reload stacked a second live handler on top. Idempotent, like the
     // disposals around it.
     this.input.destroy();
+    this.attackVectorPreview?.remove();
+    this.attackVectorPreview = null;
+    this.attackVectorLine = null;
+    this.attackVectorSource = null;
+    this.attackVectorTarget = null;
     this.disposeRenderer?.();
     if (!this.isActive) return;
 
@@ -1251,6 +1268,7 @@ export class ClientGameRunner {
             new SendAttackIntentEvent(
               this.gameView.owner(tile).id(),
               this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+              tile,
             ),
           );
         } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
@@ -1419,6 +1437,7 @@ export class ClientGameRunner {
             new SendAttackIntentEvent(
               this.gameView.owner(tile).id(),
               this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+              tile,
             ),
           );
         }
@@ -1461,6 +1480,199 @@ export class ClientGameRunner {
       this.renderer.uiState.attackRatio * this.myPlayer.troops(),
     );
     this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
+  }
+
+  private onMapDrag(event: MapDragEvent) {
+    if (event.button !== 2) return;
+    if (!this.isActive || this.gameView.inSpawnPhase()) return;
+    if (this.renderer.uiState.ghostStructure !== null) return;
+
+    const source = this.nearestOwnedTileToScreenPoint(event.startX, event.startY);
+    const targetTile = this.screenPointToTile(event.endX, event.endY);
+    if (source === null || targetTile === null || source === targetTile) return;
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    if (
+      !this.gameView.isLand(source) ||
+      this.gameView.owner(source).id() !== this.myPlayer.id() ||
+      !this.gameView.isLand(targetTile) ||
+      this.gameView.owner(targetTile).id() === this.myPlayer.id()
+    ) {
+      return;
+    }
+
+    this.myPlayer
+      .actions(targetTile, [UnitType.TransportShip])
+      .then((actions) => {
+        if (!actions.canAttack) return;
+        this.eventBus.emit(
+          new SendAttackIntentEvent(
+            this.gameView.owner(targetTile).id(),
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+            targetTile,
+            source,
+          ),
+        );
+      })
+      .catch((error) => {
+        console.warn("Failed to check dragged attack actions:", error);
+      });
+  }
+
+  private screenPointToTile(x: number, y: number): TileRef | null {
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) return null;
+    return this.gameView.ref(cell.x, cell.y);
+  }
+
+  private nearestOwnedTileToScreenPoint(x: number, y: number): TileRef | null {
+    if (this.myPlayer === null) {
+      if (!this.clientID) return null;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return null;
+      this.myPlayer = myPlayer;
+    }
+
+    const point = this.renderer.transformHandler.screenToWorldCoordinatesFloat(
+      x,
+      y,
+    );
+    const centerX = Math.floor(point.x);
+    const centerY = Math.floor(point.y);
+    if (!this.gameView.isValidCoord(centerX, centerY)) return null;
+
+    const center = this.gameView.ref(centerX, centerY);
+    const playerID = this.myPlayer.id();
+    let nearest: TileRef | null = null;
+    let nearestDistanceSquared = Infinity;
+
+    // The start is normally inside owned land. A small search radius also
+    // snaps starts just outside the border to the closest owned tile.
+    for (const tile of this.gameView.circleSearch(center, 6)) {
+      if (
+        !this.gameView.isLand(tile) ||
+        this.gameView.owner(tile).id() !== playerID
+      ) {
+        continue;
+      }
+
+      const dx = this.gameView.x(tile) + 0.5 - point.x;
+      const dy = this.gameView.y(tile) + 0.5 - point.y;
+      const distanceSquared = dx * dx + dy * dy;
+      if (distanceSquared < nearestDistanceSquared) {
+        nearest = tile;
+        nearestDistanceSquared = distanceSquared;
+      }
+    }
+    return nearest;
+  }
+
+  private onMapDragPreview(event: MapDragPreviewEvent) {
+    if (!event.active) {
+      if (this.attackVectorPreview) {
+        this.attackVectorPreview.style.display = "none";
+      }
+      return;
+    }
+    if (
+      !this.isActive ||
+      this.gameView.inSpawnPhase() ||
+      this.renderer.uiState.ghostStructure !== null
+    ) {
+      return;
+    }
+
+    const source = this.nearestOwnedTileToScreenPoint(event.startX, event.startY);
+    const target = this.screenPointToTile(event.endX, event.endY);
+    if (source === null || target === null || !this.gameView.isLand(target)) {
+      if (this.attackVectorPreview) {
+        this.attackVectorPreview.style.display = "none";
+      }
+      return;
+    }
+
+    this.ensureAttackVectorPreview();
+    const start = this.renderer.transformHandler.worldToScreenCoordinates(
+      new Cell(this.gameView.x(source) + 0.5, this.gameView.y(source) + 0.5),
+    );
+    const end = this.renderer.transformHandler.worldToScreenCoordinates(
+      new Cell(this.gameView.x(target) + 0.5, this.gameView.y(target) + 0.5),
+    );
+
+    this.attackVectorLine!.setAttribute("x1", String(start.x));
+    this.attackVectorLine!.setAttribute("y1", String(start.y));
+    this.attackVectorLine!.setAttribute("x2", String(end.x));
+    this.attackVectorLine!.setAttribute("y2", String(end.y));
+    this.attackVectorSource!.setAttribute("cx", String(start.x));
+    this.attackVectorSource!.setAttribute("cy", String(start.y));
+    this.attackVectorTarget!.setAttribute("cx", String(end.x));
+    this.attackVectorTarget!.setAttribute("cy", String(end.y));
+    this.attackVectorPreview!.style.display = "block";
+  }
+
+  private ensureAttackVectorPreview() {
+    if (this.attackVectorPreview !== null) return;
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("aria-hidden", "true");
+    Object.assign(svg.style, {
+      position: "fixed",
+      inset: "0",
+      width: "100vw",
+      height: "100vh",
+      pointerEvents: "none",
+      zIndex: "30",
+      overflow: "visible",
+      display: "none",
+    });
+
+    const defs = document.createElementNS(svgNS, "defs");
+    const marker = document.createElementNS(svgNS, "marker");
+    marker.setAttribute("id", "directed-attack-arrowhead");
+    marker.setAttribute("viewBox", "0 0 10 10");
+    marker.setAttribute("refX", "8");
+    marker.setAttribute("refY", "5");
+    marker.setAttribute("markerWidth", "8");
+    marker.setAttribute("markerHeight", "8");
+    marker.setAttribute("orient", "auto-start-reverse");
+    const arrowhead = document.createElementNS(svgNS, "path");
+    arrowhead.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
+    arrowhead.setAttribute("fill", "#facc15");
+    marker.appendChild(arrowhead);
+    defs.appendChild(marker);
+
+    const line = document.createElementNS(svgNS, "line");
+    line.setAttribute("stroke", "#facc15");
+    line.setAttribute("stroke-width", "4");
+    line.setAttribute("stroke-linecap", "round");
+    line.setAttribute("marker-end", "url(#directed-attack-arrowhead)");
+
+    const source = document.createElementNS(svgNS, "circle");
+    source.setAttribute("r", "5");
+    source.setAttribute("fill", "#facc15");
+    source.setAttribute("stroke", "#fff");
+    source.setAttribute("stroke-width", "2");
+
+    const target = document.createElementNS(svgNS, "circle");
+    target.setAttribute("r", "10");
+    target.setAttribute("fill", "#facc15");
+    target.setAttribute("fill-opacity", "0.18");
+    target.setAttribute("stroke", "#fff");
+    target.setAttribute("stroke-width", "2");
+
+    svg.append(defs, line, source, target);
+    document.body.appendChild(svg);
+    this.attackVectorPreview = svg;
+    this.attackVectorLine = line;
+    this.attackVectorSource = source;
+    this.attackVectorTarget = target;
   }
 
   private doRequestAllianceUnderCursor(): void {
