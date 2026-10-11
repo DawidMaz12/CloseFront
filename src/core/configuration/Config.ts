@@ -1099,7 +1099,19 @@ export class Config {
       baseRate = 100n;
     }
     const workerRatio = player.actualWorkerRatio();
-    return BigInt(Math.floor(Number(baseRate) * multiplier * workerRatio));
+    // Normalized workforce concentration curve: 100% workers = 5.0x, with +25% efficiency per worker (4r + r^2)
+    const ratioMultiplier = workerRatio * (4 + workerRatio);
+
+    // Economies of scale from total population (5,000 -> 1.0x, up to 5,000,000 -> 1.5x)
+    const pop = player.population();
+    const scaleFactor =
+      pop <= 5000
+        ? 1.0
+        : 1.0 + 0.5 * Math.min(1.0, Math.log10(pop / 5000) / 3);
+
+    return BigInt(
+      Math.floor(Number(baseRate) * multiplier * ratioMultiplier * scaleFactor),
+    );
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {

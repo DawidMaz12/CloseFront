@@ -27,11 +27,7 @@ describe("Population and Worker Management", () => {
     expect(p1.workers()).toBe(5000); // 20% workers
   });
 
-  it("should scale passive gold generation proportionally by worker ratio", () => {
-    // Default 20% workers
-    const gold20 = game.config().goldAdditionRate(p1);
-    expect(gold20).toBeGreaterThan(0n);
-
+  it("should scale passive gold generation with workforce efficiency and population scale", () => {
     // 0% workers -> 0 gold
     p1.setTargetWorkerRatio(0);
     p1.setWorkers(0);
@@ -39,12 +35,31 @@ describe("Population and Worker Management", () => {
     expect(p1.actualWorkerRatio()).toBe(0);
     expect(game.config().goldAdditionRate(p1)).toBe(0n);
 
-    // 100% workers -> 100% gold
+    // 20% workers at 10,000 pop
+    p1.setWorkers(2000);
+    p1.setTroops(8000);
+    expect(p1.actualWorkerRatio()).toBe(0.2);
+    const gold20 = game.config().goldAdditionRate(p1);
+    expect(gold20).toBeGreaterThan(0n);
+
+    // 100% workers at 10,000 pop -> reaches 5x concentration efficiency
     p1.setWorkers(10000);
     p1.setTroops(0);
     expect(p1.actualWorkerRatio()).toBe(1.0);
     const gold100 = game.config().goldAdditionRate(p1);
-    expect(Number(gold100)).toBeCloseTo(Number(gold20) * 5, -1);
+    // 100% output is ~5.95x of 20% output due to the +25% workforce concentration bonus
+    expect(Number(gold100) / Number(gold20)).toBeGreaterThan(5.0);
+
+    // Economies of scale: 5,000,000 pop is 1.5x more efficient than <= 5,000 pop
+    p1.setWorkers(5000);
+    p1.setTroops(0); // 5,000 pop
+    const goldSmall = game.config().goldAdditionRate(p1);
+
+    p1.setWorkers(5000000);
+    p1.setTroops(0); // 5,000,000 pop (100% workers)
+    const goldBig = game.config().goldAdditionRate(p1);
+    // big population scale bonus is exactly 1.5x the base output of small population
+    expect(Number(goldBig) / Number(goldSmall)).toBeCloseTo(1.5, 1);
   });
 
   it("should gradually convert soldiers to workers at 5% per second (0.5% per tick)", () => {
