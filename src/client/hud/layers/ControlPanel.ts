@@ -14,6 +14,7 @@ import {
 } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
+import { SendTargetWorkerRatioIntentEvent } from "../../Transport";
 import { UIState } from "../../UIState";
 import {
   getGamesPlayed,
@@ -26,6 +27,7 @@ import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
+const workerIcon = assetUrl("images/WorkerIconWhite.svg");
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -45,6 +47,17 @@ export class ControlPanel extends LitElement implements Controller {
 
   @state()
   private _troops: number;
+
+  @state()
+  private _workers: number = 0;
+
+  @state()
+  private _targetWorkerRatio: number = 0.2;
+
+  @state()
+  private _actualWorkerRatio: number = 0.2;
+
+  private _isAdjustingWorkerSlider: boolean = false;
 
   @state()
   private _isVisible = false;
@@ -137,6 +150,11 @@ export class ControlPanel extends LitElement implements Controller {
     this._maxTroops = config.maxTroops(player);
     this._gold = player.gold();
     this._troops = player.troops();
+    this._workers = player.workers();
+    this._actualWorkerRatio = player.actualWorkerRatio();
+    if (!this._isAdjustingWorkerSlider) {
+      this._targetWorkerRatio = player.targetWorkerRatio();
+    }
     this._attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
@@ -361,6 +379,35 @@ export class ControlPanel extends LitElement implements Controller {
 
   private handleRatioSliderPointerUp(e: Event) {
     (e.target as HTMLInputElement).blur();
+  }
+
+  private handleWorkerSliderInput(e: Event) {
+    this._isAdjustingWorkerSlider = true;
+    const input = e.target as HTMLInputElement;
+    const value = Number(input.value);
+    this._targetWorkerRatio = value / 100;
+    this.requestUpdate();
+  }
+
+  private handleWorkerSliderPointerUp(e: Event) {
+    this._isAdjustingWorkerSlider = false;
+    const input = e.target as HTMLInputElement;
+    input.blur();
+    const value = Number(input.value);
+    this._targetWorkerRatio = value / 100;
+    this.eventBus.emit(
+      new SendTargetWorkerRatioIntentEvent(this._targetWorkerRatio),
+    );
+  }
+
+  private handleWorkerSliderChange(e: Event) {
+    this._isAdjustingWorkerSlider = false;
+    const input = e.target as HTMLInputElement;
+    const value = Number(input.value);
+    this._targetWorkerRatio = value / 100;
+    this.eventBus.emit(
+      new SendTargetWorkerRatioIntentEvent(this._targetWorkerRatio),
+    );
   }
 
   private calculateTroopBar(): { greenPercent: number; orangePercent: number } {
@@ -596,6 +643,42 @@ export class ControlPanel extends LitElement implements Controller {
           class="flex-1 h-1.5 accent-aquarius cursor-pointer"
         />
       </div>
+      <!-- Row 3: worker ratio | slider -->
+      <div
+        class="flex items-center gap-1.5 mt-1"
+        translate="no"
+      >
+        <div
+          class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md px-1 py-0.5 text-sm font-bold text-white cursor-pointer w-[8rem]"
+          title="Workers: ${(this._actualWorkerRatio * 100).toFixed(0)}% actual (${(this._targetWorkerRatio * 100).toFixed(0)}% target)"
+        >
+          <img
+            src=${workerIcon}
+            alt=""
+            aria-hidden="true"
+            width="12"
+            height="12"
+            style="filter: brightness(0) invert(1);"
+          />
+          <span
+            >${(this._actualWorkerRatio * 100).toFixed(0)}%
+            (${renderTroops(this._workers)})</span
+          >
+          ${Math.abs(this._actualWorkerRatio - this._targetWorkerRatio) >= 0.01
+            ? html`<span class="text-[10px] text-amber-400 font-normal ml-auto">→${(this._targetWorkerRatio * 100).toFixed(0)}%</span>`
+            : ""}
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          .value=${String(Math.round(this._targetWorkerRatio * 100))}
+          @input=${(e: Event) => this.handleWorkerSliderInput(e)}
+          @pointerup=${(e: Event) => this.handleWorkerSliderPointerUp(e)}
+          @change=${(e: Event) => this.handleWorkerSliderChange(e)}
+          class="flex-1 h-1.5 accent-amber-500 cursor-pointer"
+        />
+      </div>
     `;
   }
 
@@ -667,6 +750,33 @@ export class ControlPanel extends LitElement implements Controller {
             class="w-full h-1.5 accent-aquarius cursor-pointer"
           />
         </div>
+      </div>
+      <!-- Mobile Worker Row -->
+      <div class="flex gap-2 items-center mt-1" translate="no">
+        <div class="flex items-center gap-1 shrink-0 text-white text-[11px] font-bold">
+          <img
+            src=${workerIcon}
+            alt=""
+            aria-hidden="true"
+            width="10"
+            height="10"
+            style="filter: brightness(0) invert(1);"
+          />
+          <span>${(this._actualWorkerRatio * 100).toFixed(0)}% (${renderTroops(this._workers)})</span>
+          ${Math.abs(this._actualWorkerRatio - this._targetWorkerRatio) >= 0.01
+            ? html`<span class="text-[9px] text-amber-400">→${(this._targetWorkerRatio * 100).toFixed(0)}%</span>`
+            : ""}
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          .value=${String(Math.round(this._targetWorkerRatio * 100))}
+          @input=${(e: Event) => this.handleWorkerSliderInput(e)}
+          @pointerup=${(e: Event) => this.handleWorkerSliderPointerUp(e)}
+          @change=${(e: Event) => this.handleWorkerSliderChange(e)}
+          class="flex-1 h-1.5 accent-amber-500 cursor-pointer"
+        />
       </div>
     `;
   }

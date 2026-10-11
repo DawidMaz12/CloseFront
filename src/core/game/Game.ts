@@ -665,7 +665,18 @@ export interface Player {
   troops(): number;
   setTroops(troops: number): void;
   addTroops(troops: number): void;
-  removeTroops(troops: number): number;
+  removeTroops(troops: number, allowWorkerLoss?: boolean): number;
+
+  // Population & Workers
+  workers(): number;
+  setWorkers(workers: number): void;
+  addWorkers(workers: number): void;
+  removeWorkers(workers: number): number;
+  population(): number;
+  targetWorkerRatio(): number;
+  actualWorkerRatio(): number;
+  setTargetWorkerRatio(ratio: number): void;
+  tickPopulation(): void;
 
   // Units
   // Fixed-arity + array overloads instead of a rest parameter: the rest array

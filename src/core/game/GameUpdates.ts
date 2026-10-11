@@ -252,6 +252,9 @@ export interface PlayerUpdate {
   /** Cumulative gold received from all sources (workers, trade, ...). */
   goldEarned?: Gold;
   troops?: number;
+  workers?: number;
+  targetWorkerRatio?: number;
+  actualWorkerRatio?: number;
   allies?: number[];
   embargoes?: Set<PlayerID>;
   isTraitor?: boolean;

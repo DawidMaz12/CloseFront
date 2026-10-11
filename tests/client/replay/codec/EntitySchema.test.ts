@@ -63,6 +63,9 @@ const basePlayer: PlayerState = {
   outgoingAllianceRequests: [],
   alliances: [],
   outgoingEmojis: [],
+  workers: 5000,
+  targetWorkerRatio: 0.2,
+  actualWorkerRatio: 0.2,
 };
 
 const playerAlternatives: { [K in keyof PlayerFields]: PlayerFields[K] } = {
@@ -77,6 +80,9 @@ const playerAlternatives: { [K in keyof PlayerFields]: PlayerFields[K] } = {
   piracyGold: 2 ** 40, // huge
   goldEarned: 95_000,
   troops: 24_990,
+  workers: 6000,
+  targetWorkerRatio: 0.35,
+  actualWorkerRatio: 0.25,
   isTraitor: true,
   traitorRemainingTicks: 300,
   inDoomsdayClock: true,

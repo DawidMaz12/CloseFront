@@ -387,6 +387,9 @@ export const PLAYER_FIELDS: readonly FieldDef<PlayerFields>[] = [
   field(["outgoingAllianceRequests", list(STRING)]),
   field(["alliances", list(ALLIANCE)]),
   field(["outgoingEmojis", list(EMOJI)]),
+  field(["workers", COUNTER]),
+  field(["targetWorkerRatio", F64]),
+  field(["actualWorkerRatio", F64]),
 ];
 
 export const UNIT_FIELDS: readonly FieldDef<UnitFields>[] = [

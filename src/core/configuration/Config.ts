@@ -1057,10 +1057,11 @@ export class Config {
 
   troopIncreaseRate(player: Player | PlayerView): number {
     const max = this.maxTroops(player);
+    const pop = player.population();
 
-    let toAdd = 10 + pow(player.troops(), 0.73) / 4;
+    let toAdd = 10 + pow(pop, 0.73) / 4;
 
-    const ratio = 1 - player.troops() / max;
+    const ratio = 1 - pop / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -1086,7 +1087,7 @@ export class Config {
       }
     }
 
-    return Math.min(player.troops() + toAdd, max) - player.troops();
+    return Math.min(pop + toAdd, max) - pop;
   }
 
   goldAdditionRate(player: Player | PlayerView): Gold {
@@ -1097,7 +1098,8 @@ export class Config {
     } else {
       baseRate = 100n;
     }
-    return BigInt(Math.floor(Number(baseRate) * multiplier));
+    const workerRatio = player.actualWorkerRatio();
+    return BigInt(Math.floor(Number(baseRate) * multiplier * workerRatio));
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {

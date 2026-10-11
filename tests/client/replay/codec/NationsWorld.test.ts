@@ -59,7 +59,7 @@ test("world map nations: trade ships and trains round-trip", async () => {
 
   let spawnEnded = false;
   const rec = await recordGame(game, {
-    ticks: 5000,
+    ticks: 8000,
     keyframeInterval: 100,
     skipInit: true,
     tileTruthEvery: 97,
@@ -73,7 +73,6 @@ test("world map nations: trade ships and trains round-trip", async () => {
 
   const reader = openReader(rec.replay);
   const h = reader.header;
-  // The fixture must actually exercise what it claims to.
   const types = new Set(
     rec.truth.flatMap((t) => [...t.units.values()].map((u) => u.unitType)),
   );

@@ -218,6 +218,7 @@ export class NationExecution implements Execution {
     }
 
     this.emojiBehavior.maybeSendCasualEmoji();
+    this.updateWorkerRatio();
     this.updateRelationsFromEmbargos();
     this.allianceBehavior.handleAllianceRequests();
     this.allianceBehavior.handleAllianceExtensionRequests();
@@ -484,6 +485,26 @@ export class NationExecution implements Execution {
     this.attackBehavior = attack;
     this.nukeBehavior = nuke;
     this.structureBehavior = structure;
+  }
+
+  private updateWorkerRatio(): void {
+    if (!this.player) return;
+    const incomingThreat = this.player.incomingAttacks().some((a) => {
+      const attacker = a.attacker();
+      return attacker && attacker.isPlayer() && attacker !== this.player;
+    });
+    const hasHostileAttack = this.player.outgoingAttacks().some((a) => {
+      const target = a.target();
+      return target && target.isPlayer() && target !== this.player;
+    });
+
+    if (incomingThreat) {
+      this.player.setTargetWorkerRatio(0.1);
+    } else if (hasHostileAttack) {
+      this.player.setTargetWorkerRatio(0.2);
+    } else {
+      this.player.setTargetWorkerRatio(0.55);
+    }
   }
 }
 

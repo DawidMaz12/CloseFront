@@ -51,6 +51,9 @@ export function diffPlayerUpdate(
     prev.tradeGold === next.tradeGold &&
     prev.trainGold === next.trainGold &&
     prev.piracyGold === next.piracyGold &&
+    prev.workers === next.workers &&
+    prev.targetWorkerRatio === next.targetWorkerRatio &&
+    prev.actualWorkerRatio === next.actualWorkerRatio &&
     prev.isTraitor === next.isTraitor &&
     prev.traitorRemainingTicks === next.traitorRemainingTicks &&
     prev.inDoomsdayClock === next.inDoomsdayClock &&
@@ -104,6 +107,15 @@ export function diffPlayerUpdate(
   setIfDifferent("tradeGold", prev.tradeGold === next.tradeGold);
   setIfDifferent("trainGold", prev.trainGold === next.trainGold);
   setIfDifferent("piracyGold", prev.piracyGold === next.piracyGold);
+  setIfDifferent("workers", prev.workers === next.workers);
+  setIfDifferent(
+    "targetWorkerRatio",
+    prev.targetWorkerRatio === next.targetWorkerRatio,
+  );
+  setIfDifferent(
+    "actualWorkerRatio",
+    prev.actualWorkerRatio === next.actualWorkerRatio,
+  );
   // tilesOwned / gold / troops / goldEarned intentionally absent — see
   // EXCEPTION above (goldEarned churns every tick via worker income).
   setIfDifferent("isTraitor", prev.isTraitor === next.isTraitor);
@@ -183,6 +195,11 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.piracyGold !== undefined) target.piracyGold = Number(pu.piracyGold);
   if (pu.goldEarned !== undefined) target.goldEarned = Number(pu.goldEarned);
   if (pu.troops !== undefined) target.troops = pu.troops;
+  if (pu.workers !== undefined) target.workers = pu.workers;
+  if (pu.targetWorkerRatio !== undefined)
+    target.targetWorkerRatio = pu.targetWorkerRatio;
+  if (pu.actualWorkerRatio !== undefined)
+    target.actualWorkerRatio = pu.actualWorkerRatio;
   if (pu.isTraitor !== undefined) target.isTraitor = pu.isTraitor;
   if (pu.traitorRemainingTicks !== undefined) {
     target.traitorRemainingTicks = Math.max(0, pu.traitorRemainingTicks);
