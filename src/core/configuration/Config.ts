@@ -2,7 +2,7 @@ import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
 import { ClusterConfig } from "../ClusterConfig";
-import { exp, log, pow, pow2 } from "../DetMath";
+import { exp, log, log10, pow, pow2 } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
   Difficulty,
@@ -1107,7 +1107,7 @@ export class Config {
     const scaleFactor =
       pop <= 5000
         ? 1.0
-        : 1.0 + 0.5 * Math.min(1.0, Math.log10(pop / 5000) / 3);
+        : 1.0 + 0.5 * Math.min(1.0, log10(pop / 5000) / 3);
 
     return BigInt(
       Math.floor(Number(baseRate) * multiplier * ratioMultiplier * scaleFactor),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { atan2, exp, log, pow, pow2 } from "../../src/core/DetMath";
+import { atan2, exp, log, log10, pow, pow2 } from "../../src/core/DetMath";
 
 function relErr(a: number, b: number): number {
   return b === 0 ? Math.abs(a) : Math.abs(a - b) / Math.abs(b);
@@ -39,6 +39,18 @@ describe("DetMath", () => {
     expect(log(0)).toBe(-Infinity);
     expect(log(-1)).toBeNaN();
     expect(relErr(log(5e-324), Math.log(5e-324))).toBeLessThan(1e-8);
+  });
+
+  it("log10 matches Math.log10 to 1e-8 across the useful range", () => {
+    for (let p = -300; p <= 300; p += 0.61) {
+      const x = 10 ** p;
+      expect(relErr(log10(x), Math.log10(x))).toBeLessThan(1e-8);
+    }
+    expect(log10(1)).toBe(0);
+    expect(log10(10)).toBeCloseTo(1, 10);
+    expect(log10(1000)).toBeCloseTo(3, 10);
+    expect(log10(0)).toBe(-Infinity);
+    expect(log10(-1)).toBeNaN();
   });
 
   it("pow matches Math.pow to 1e-7 on game-sized inputs", () => {
