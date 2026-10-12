@@ -31,6 +31,7 @@ import { RecomputeRailClusterExecutionSnapshot } from "../execution/RecomputeRai
 import { RetreatExecutionSnapshot } from "../execution/RetreatExecution";
 import { SAMLauncherExecutionSnapshot } from "../execution/SAMLauncherExecution";
 import { SAMMissileExecutionSnapshot } from "../execution/SAMMissileExecution";
+import { SetTargetWorkerRatioExecutionSnapshot } from "../execution/SetTargetWorkerRatioExecution";
 import { ShellExecutionSnapshot } from "../execution/ShellExecution";
 import { SpawnExecutionSnapshot } from "../execution/SpawnExecution";
 import { SpawnTimerExecutionSnapshot } from "../execution/SpawnTimerExecution";
@@ -85,6 +86,7 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   RetreatExecutionSnapshot,
   SAMLauncherExecutionSnapshot,
   SAMMissileExecutionSnapshot,
+  SetTargetWorkerRatioExecutionSnapshot,
   ShellExecutionSnapshot,
   SpawnExecutionSnapshot,
   SpawnTimerExecutionSnapshot,

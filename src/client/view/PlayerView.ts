@@ -476,6 +476,22 @@ export class PlayerView {
     return this.state.troops;
   }
 
+  workers(): number {
+    return this.state.workers ?? 0;
+  }
+
+  targetWorkerRatio(): number {
+    return this.state.targetWorkerRatio ?? 0.2;
+  }
+
+  actualWorkerRatio(): number {
+    return this.state.actualWorkerRatio ?? 0.2;
+  }
+
+  population(): number {
+    return this.troops() + this.workers();
+  }
+
   totalUnitLevels(type: UnitType): number {
     return this.units(type)
       .filter((unit) => !unit.isUnderConstruction())

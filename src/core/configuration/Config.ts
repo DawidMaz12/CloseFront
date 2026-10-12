@@ -2,7 +2,7 @@ import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
 import { ClusterConfig } from "../ClusterConfig";
-import { exp, log, pow, pow2 } from "../DetMath";
+import { exp, log, log10, pow, pow2 } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
   Difficulty,
@@ -1057,10 +1057,11 @@ export class Config {
 
   troopIncreaseRate(player: Player | PlayerView): number {
     const max = this.maxTroops(player);
+    const pop = player.population();
 
-    let toAdd = 10 + pow(player.troops(), 0.73) / 4;
+    let toAdd = 10 + pow(pop, 0.73) / 4;
 
-    const ratio = 1 - player.troops() / max;
+    const ratio = 1 - pop / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -1086,7 +1087,7 @@ export class Config {
       }
     }
 
-    return Math.min(player.troops() + toAdd, max) - player.troops();
+    return Math.min(pop + toAdd, max) - pop;
   }
 
   goldAdditionRate(player: Player | PlayerView): Gold {
@@ -1097,7 +1098,20 @@ export class Config {
     } else {
       baseRate = 100n;
     }
-    return BigInt(Math.floor(Number(baseRate) * multiplier));
+    const workerRatio = player.actualWorkerRatio();
+    // Normalized workforce concentration curve: 100% workers = 5.0x, with +25% efficiency per worker (4r + r^2)
+    const ratioMultiplier = workerRatio * (4 + workerRatio);
+
+    // Economies of scale from total population (5,000 -> 1.0x, up to 5,000,000 -> 1.5x)
+    const pop = player.population();
+    const scaleFactor =
+      pop <= 5000
+        ? 1.0
+        : 1.0 + 0.5 * Math.min(1.0, log10(pop / 5000) / 3);
+
+    return BigInt(
+      Math.floor(Number(baseRate) * multiplier * ratioMultiplier * scaleFactor),
+    );
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {

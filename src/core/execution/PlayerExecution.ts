@@ -94,8 +94,16 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    const troopInc = this.config.troopIncreaseRate(this.player);
-    this.player.addTroops(troopInc);
+    // Population conversion (5% per second = 0.5% per tick)
+    this.player.tickPopulation();
+
+    const popInc = this.config.troopIncreaseRate(this.player);
+    const targetWorkerRatio = this.player.targetWorkerRatio();
+    const workersInc = Math.round(popInc * targetWorkerRatio);
+    const soldiersInc = popInc - workersInc;
+    this.player.addWorkers(workersInc);
+    this.player.addTroops(soldiersInc);
+
     const goldFromWorkers = this.config.goldAdditionRate(this.player);
     this.player.addGold(goldFromWorkers);
 

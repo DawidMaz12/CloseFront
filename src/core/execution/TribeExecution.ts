@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 import { Execution, Game, Player, Structures } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
@@ -74,7 +74,27 @@ export class TribeExecution implements Execution {
 
     this.acceptAllAllianceRequests();
     this.deleteNextStructure();
+    this.updateWorkerRatio();
     this.maybeAttack();
+  }
+
+  private updateWorkerRatio() {
+    const incomingThreat = this.tribe.incomingAttacks().some((a) => {
+      const attacker = a.attacker();
+      return attacker && attacker.isPlayer() && attacker !== this.tribe;
+    });
+    const hasHostileAttack = this.tribe.outgoingAttacks().some((a) => {
+      const target = a.target();
+      return target && target.isPlayer() && target !== this.tribe;
+    });
+
+    if (incomingThreat) {
+      this.tribe.setTargetWorkerRatio(0.1);
+    } else if (hasHostileAttack) {
+      this.tribe.setTargetWorkerRatio(0.2);
+    } else {
+      this.tribe.setTargetWorkerRatio(0.5);
+    }
   }
 
   private acceptAllAllianceRequests() {

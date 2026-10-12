@@ -139,6 +139,8 @@ export class PlayerImpl implements Player {
 
   private _gold: bigint;
   private _troops: bigint;
+  private _workers: bigint = 0n;
+  private _targetWorkerRatio: number = 0.2;
 
   /** Cumulative ship-trade revenue (arrival credit for src + dst port owners). */
   private _tradeGold: bigint = 0n;
@@ -213,7 +215,12 @@ export class PlayerImpl implements Player {
     startTroops: number,
     private _team: Team | null,
   ) {
-    this._troops = toInt(startTroops);
+    const initialTargetWorkerRatio = 0.2;
+    this._targetWorkerRatio = initialTargetWorkerRatio;
+    const initialSoldiers = Math.floor(startTroops * (1 - initialTargetWorkerRatio));
+    const initialWorkers = Math.max(0, startTroops - initialSoldiers);
+    this._troops = toInt(initialSoldiers);
+    this._workers = toInt(initialWorkers);
     this._gold = mg.config().startingGold(playerInfo);
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
@@ -397,6 +404,9 @@ export class PlayerImpl implements Player {
       piracyGold: this._piracyGold,
       goldEarned: this._goldEarned,
       troops: this.troops(),
+      workers: this.workers(),
+      targetWorkerRatio: this.targetWorkerRatio(),
+      actualWorkerRatio: this.actualWorkerRatio(),
       allies: allies,
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
@@ -1373,13 +1383,92 @@ export class PlayerImpl implements Player {
     }
     this._troops += toInt(troops);
   }
-  removeTroops(troops: number): number {
+
+  removeTroops(troops: number, allowWorkerLoss: boolean = false): number {
     if (troops <= 0) {
       return 0;
     }
     const toRemove = minInt(this._troops, toInt(troops));
     this._troops -= toRemove;
+    let removed = Number(toRemove);
+    if (allowWorkerLoss && removed < troops && this._workers > 0n) {
+      const remainingDeficit = toInt(troops - removed);
+      const workerLoss = minInt(this._workers, remainingDeficit);
+      this._workers -= workerLoss;
+      removed += Number(workerLoss);
+    }
+    return removed;
+  }
+
+  workers(): number {
+    return Number(this._workers);
+  }
+
+  setWorkers(workers: number): void {
+    this._workers = toInt(Math.max(0, workers));
+  }
+
+  addWorkers(workers: number): void {
+    if (workers < 0) {
+      this.removeWorkers(-1 * workers);
+      return;
+    }
+    this._workers += toInt(workers);
+  }
+
+  removeWorkers(workers: number): number {
+    if (workers <= 0) {
+      return 0;
+    }
+    const toRemove = minInt(this._workers, toInt(workers));
+    this._workers -= toRemove;
     return Number(toRemove);
+  }
+
+  population(): number {
+    return this.troops() + this.workers();
+  }
+
+  targetWorkerRatio(): number {
+    return this._targetWorkerRatio;
+  }
+
+  actualWorkerRatio(): number {
+    const total = this.population();
+    if (total <= 0) {
+      return this._targetWorkerRatio;
+    }
+    return this.workers() / total;
+  }
+
+  setTargetWorkerRatio(ratio: number): void {
+    this._targetWorkerRatio = Math.max(0, Math.min(1, ratio));
+  }
+
+  tickPopulation(): void {
+    const totalPop = this.population();
+    if (totalPop <= 0) return;
+
+    // 5% per second at 10 ticks per second = 0.005 (0.5%) per tick
+    const maxConvert = Math.max(1, Math.floor(totalPop * 0.005));
+    const targetWorkers = Math.round(totalPop * this._targetWorkerRatio);
+    const currentWorkers = this.workers();
+
+    if (currentWorkers < targetWorkers) {
+      const needed = targetWorkers - currentWorkers;
+      const canConvert = Math.min(needed, maxConvert, this.troops());
+      if (canConvert > 0) {
+        this._troops -= toInt(canConvert);
+        this._workers += toInt(canConvert);
+      }
+    } else if (currentWorkers > targetWorkers) {
+      const excess = currentWorkers - targetWorkers;
+      const canConvert = Math.min(excess, maxConvert, currentWorkers);
+      if (canConvert > 0) {
+        this._workers -= toInt(canConvert);
+        this._troops += toInt(canConvert);
+      }
+    }
   }
 
   captureUnit(unit: Unit): void {
@@ -1973,6 +2062,8 @@ export class PlayerImpl implements Player {
       random: w.random(this._pseudo_random),
       gold: this._gold,
       troops: this._troops,
+      workers: this._workers,
+      targetWorkerRatio: this._targetWorkerRatio,
       tradeGold: this._tradeGold,
       trainGold: this._trainGold,
       piracyGold: this._piracyGold,
@@ -2045,6 +2136,8 @@ export class PlayerImpl implements Player {
     this._pseudo_random = r.random(s.random);
     this._gold = s.gold;
     this._troops = s.troops;
+    this._workers = s.workers ?? 0n;
+    this._targetWorkerRatio = s.targetWorkerRatio ?? 0.2;
     this._tradeGold = s.tradeGold;
     this._trainGold = s.trainGold;
     this._piracyGold = s.piracyGold;
@@ -2120,6 +2213,8 @@ export const PlayerSnapshot = snapshotType({
     random: zRandom(),
     gold: z.bigint(),
     troops: z.bigint(),
+    workers: z.bigint().optional(),
+    targetWorkerRatio: zNum().optional(),
     tradeGold: z.bigint(),
     trainGold: z.bigint(),
     piracyGold: z.bigint(),

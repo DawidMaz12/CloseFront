@@ -20,6 +20,7 @@ const HI = u32[1] === 0x3ff00000 ? 1 : 0;
 const LO = 1 - HI;
 
 const LN2 = 0.6931471805599453;
+const LN10 = 2.302585092994046;
 const LOG2E = 1.4426950408889634;
 const SQRT2 = 1.4142135623730951;
 const PI = 3.141592653589793;
@@ -86,6 +87,11 @@ export function log(x: number): number {
       (1 / 3 +
         z * (1 / 5 + z * (1 / 7 + z * (1 / 9 + z * (1 / 11 + z * (1 / 13))))));
   return e * LN2 + 2 * s * series;
+}
+
+/** Base-10 log of x > 0. */
+export function log10(x: number): number {
+  return log(x) / LN10;
 }
 
 /** x ** y for x >= 0. */

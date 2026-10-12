@@ -620,15 +620,18 @@ export class AiAttackBehavior {
       );
   }
 
+  private maxSoldiers(player: Player = this.player): number {
+    const maxTroops = this.game.config().maxTroops(player);
+    return Math.max(1, maxTroops * (1 - player.actualWorkerRatio()));
+  }
+
   private hasReserveRatioTroops(): boolean {
-    const maxTroops = this.game.config().maxTroops(this.player);
-    const ratio = this.player.troops() / maxTroops;
+    const ratio = this.player.troops() / this.maxSoldiers();
     return ratio >= this.reserveRatio;
   }
 
   private hasTriggerRatioTroops(): boolean {
-    const maxTroops = this.game.config().maxTroops(this.player);
-    const ratio = this.player.troops() / maxTroops;
+    const ratio = this.player.troops() / this.maxSoldiers();
     return ratio >= this.triggerRatio;
   }
 
@@ -702,12 +705,12 @@ export class AiAttackBehavior {
       if (attack.target() === attacker) pressing += attack.troops();
     }
     const troops = this.player.troops();
-    const maxTroops = this.game.config().maxTroops(this.player);
+    const maxSoldiers = this.maxSoldiers();
     const spare = Math.min(
-      troops - maxTroops * this.expandRatio,
+      troops - maxSoldiers * this.expandRatio,
       this.neighborTroopCap(attacker),
     );
-    const aboveReserve = troops - maxTroops * this.reserveRatio;
+    const aboveReserve = troops - maxSoldiers * this.reserveRatio;
     const counter = incoming + Math.max(0, attacker.troops() - pressing);
     const send =
       spare >= counter
@@ -921,9 +924,9 @@ export class AiAttackBehavior {
   // which also don't have significantly more troops than us (to target MIRVed players)
   private findVeryWeakEnemy(enemies: Player[]): Player | null {
     const veryWeakEnemies = enemies.filter((enemy) => {
-      const enemyMaxTroops = this.game.config().maxTroops(enemy);
+      const enemyMaxSoldiers = this.maxSoldiers(enemy);
       return (
-        enemy.troops() < enemyMaxTroops * 0.15 &&
+        enemy.troops() < enemyMaxSoldiers * 0.15 &&
         (!this.isFFA() || enemy.troops() < this.player.troops() * 1.2)
       );
     });
@@ -1319,7 +1322,7 @@ export class AiAttackBehavior {
     nonBotTroops: (targetTroops: number) => number,
     opponent?: Player,
   ): number | null {
-    const maxTroops = this.game.config().maxTroops(this.player);
+    const maxSoldiers = this.maxSoldiers();
     const botWithStructures =
       target.isPlayer() &&
       target.type() === PlayerType.Bot &&
@@ -1328,7 +1331,7 @@ export class AiAttackBehavior {
     // recapture those structures ASAP, even before reaching the normal reserve.
     const useReserve = target.isPlayer() && !botWithStructures;
     const reserveRatio = useReserve ? this.reserveRatio : this.expandRatio;
-    const targetTroops = maxTroops * reserveRatio;
+    const targetTroops = maxSoldiers * reserveRatio;
 
     let troops;
     const isBotAttack =
@@ -1814,11 +1817,11 @@ export class AiAttackBehavior {
       return false;
     }
 
-    // Find teammate with lowest troop percentage (troops / maxTroops)
+    // Find teammate with lowest troop percentage (troops / maxSoldiers)
     const teammatesWithTroopPercentage = teammates
       .map((teammate) => {
-        const maxTroops = this.game.config().maxTroops(teammate);
-        const troopPercentage = teammate.troops() / Math.max(maxTroops, 1);
+        const maxSoldiers = this.maxSoldiers(teammate);
+        const troopPercentage = teammate.troops() / Math.max(maxSoldiers, 1);
         return { teammate, troopPercentage };
       })
       .sort((a, b) => a.troopPercentage - b.troopPercentage);
@@ -1837,8 +1840,8 @@ export class AiAttackBehavior {
     }
 
     // Donate a portion of our troops (keeping reserve)
-    const maxTroops = this.game.config().maxTroops(this.player);
-    const troopsToKeep = maxTroops * this.reserveRatio;
+    const maxSoldiers = this.maxSoldiers();
+    const troopsToKeep = maxSoldiers * this.reserveRatio;
     const availableTroops = this.player.troops() - troopsToKeep;
 
     if (availableTroops < 1) {

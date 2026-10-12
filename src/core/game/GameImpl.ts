@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { renderNumber } from "../../client/Utils";
+import { renderNumber, renderTroops } from "../../client/Utils";
 import { UnitView } from "../../client/view";
 import { Config } from "../configuration/Config";
 import {
@@ -1593,6 +1593,26 @@ export class GameImpl implements Game {
 
       // Record stats
       this.stats().goldWar(conqueror, conquered, goldCaptured);
+    }
+
+    const conqueredWorkers = conquered.workers();
+    if (conqueredWorkers > 0) {
+      const capturedWorkers = Math.floor(conqueredWorkers / 2);
+      if (capturedWorkers > 0) {
+        conqueror.addWorkers(capturedWorkers);
+        this.displayMessage(
+          "events_display.captured_workers_from_conquest",
+          MessageType.CONQUERED_PLAYER,
+          conqueror.id(),
+          undefined,
+          {
+            workers: renderTroops(capturedWorkers),
+            name: conquered.displayName(),
+          },
+          undefined,
+          conquered.id(),
+        );
+      }
     }
 
     // OFM: per-kill log for standings (humans-only filtered in recordKill).

@@ -98,6 +98,10 @@ export class SendAttackIntentEvent implements GameEvent {
   ) { }
 }
 
+export class SendTargetWorkerRatioIntentEvent implements GameEvent {
+  constructor(public readonly ratio: number) { }
+}
+
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
     public readonly dst: TileRef,
@@ -304,6 +308,9 @@ export class Transport {
     );
     this.subscribe(SendSpawnIntentEvent, (e) => this.onSendSpawnIntentEvent(e));
     this.subscribe(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
+    this.subscribe(SendTargetWorkerRatioIntentEvent, (e) =>
+      this.onSendTargetWorkerRatioIntent(e),
+    );
     this.subscribe(SendUpgradeStructureIntentEvent, (e) =>
       this.onSendUpgradeStructureIntent(e),
     );
@@ -804,6 +811,15 @@ export class Transport {
       troops: event.troops,
       targetTile: event.targetTile,
       sourceTile: event.sourceTile,
+    });
+  }
+
+  private onSendTargetWorkerRatioIntent(
+    event: SendTargetWorkerRatioIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "set_target_worker_ratio",
+      ratio: event.ratio,
     });
   }
 
